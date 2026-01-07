@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Globe, Users, TrendingUp, CheckCircle, XCircle, AlertTriangle, Cpu, FileText } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Globe, TrendingUp, CheckCircle, XCircle, AlertTriangle, Cpu, FileText, ArrowRight, ShieldCheck, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
 // --- Types ---
@@ -9,46 +9,32 @@ interface AnalysisResult {
   overall_score: number;
   aeo: {
     aeo_score: number;
-    llm_txt: { exists: boolean; content: string | null; grade: string; grading_criteria?: any };
-    ai_txt: { exists: boolean; content: string | null; grade: string; grading_criteria?: any };
-    robots_txt: { exists: boolean; content: string | null; ai_friendly: boolean; grade: string; grading_criteria?: any };
-    recommendations: string[];
-  };
-  social: {
-    overall_social_score: number;
-    brand: string;
-    platforms: Array<{ name: string; score: number; status: string; tips: string[] }>;
+    llm_txt: { exists: boolean; content: string | null; grade: string };
+    ai_txt: { exists: boolean; content: string | null; grade: string };
+    robots_txt: { exists: boolean; content: string | null; ai_friendly: boolean; grade: string };
   };
   optimized_files: { llm_txt: string; ai_txt: string; robots_txt: string };
   advanced_checks: { [key: string]: { status: string; detail: string } };
 }
 
-interface CompetitorResult {
-  target_domain: string;
-  competitors: Array<{ name: string; domain: string; score: number }>;
-}
-
 interface GeneratedFiles {
-  llm_txt: string;
-  ai_txt: string;
-  robots_txt: string;
-  analysis: { pages_crawled: number; sections_found: string[]; schema_types: string[] };
+  llm_txt: string; ai_txt: string; robots_txt: string;
 }
 
 // --- Helper Components ---
 
-// Tip #3: Engine Status Card
+// Tip #3: Compact Engine Status Card
 const EngineCard: React.FC<{ name: string; status: 'Allowed' | 'Blocked' | 'Unknown'; detail: string }> = ({ name, status, detail }) => {
-  const color = status === 'Allowed' ? 'text-green-600 bg-green-50' : status === 'Blocked' ? 'text-red-600 bg-red-50' : 'text-gray-600 bg-gray-50';
-  const icon = status === 'Allowed' ? <CheckCircle size={18} /> : status === 'Blocked' ? <XCircle size={18} /> : <AlertTriangle size={18} />;
+  const badgeClass = status === 'Allowed' ? 'badge-success' : status === 'Blocked' ? 'badge-error' : 'badge-neutral';
+  const icon = status === 'Allowed' ? <CheckCircle size={14} /> : status === 'Blocked' ? <XCircle size={14} /> : <AlertTriangle size={14} />;
   
   return (
-    <div className={`p-4 rounded-xl border border-gray-100 flex flex-col gap-2 ${color}`}>
-      <div className="flex items-center justify-between">
-        <span className="font-bold text-sm">{name}</span>
-        {icon}
+    <div className="p-3 rounded-lg bg-white/40 border border-stone-200 flex flex-col justify-between h-full hover:bg-white/60 transition-colors">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-bold text-xs text-stone-700">{name}</span>
+        <div className={`${badgeClass} p-1 rounded-full`}>{icon}</div>
       </div>
-      <span className="text-xs font-medium opacity-80">{detail}</span>
+      <span className="text-[10px] font-medium text-stone-500 uppercase tracking-wide">{detail}</span>
     </div>
   );
 };
@@ -60,25 +46,22 @@ const App: React.FC = () => {
   
   // Tip #1: Entity Confirmation State
   const [step, setStep] = useState<'input' | 'confirm' | 'results'>('input');
-  const [entityData, setEntityData] = useState<{ name: string; type: string; domain: string }>({ name: '', type: 'Organization', domain: '' });
+  const [entityData, setEntityData] = useState<{ name: string; type: string }>({ name: '', type: 'Organization' });
 
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [competitors, setCompetitors] = useState<CompetitorResult | null>(null);
-  const [compLoading, setCompLoading] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFiles | null>(null);
   const [generateLoading, setGenerateLoading] = useState(false);
 
-  // 1. Initial Fetch (Pre-Analysis)
+  // 1. Initial Fetch
   const handleInitialCheck = () => {
     if (!domain) return;
-    // Simulate detecting entity from domain for Tip #1
     const detectedName = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
-    setEntityData({ name: detectedName, type: 'Organization', domain: domain });
+    setEntityData({ name: detectedName, type: 'Organization' });
     setStep('confirm');
   };
 
-  // 2. Confirm Entity & Run Full Analysis
+  // 2. Confirm Entity & Analyze
   const handleConfirmAndAnalyze = async () => {
     setLoading(true);
     setStep('results');
@@ -87,26 +70,22 @@ const App: React.FC = () => {
       const resp = await fetch(`http://localhost:8000/analyze?domain=${domain}`);
       const data = await resp.json();
       setResult(data);
-    } catch (err) {
-      console.error("Analysis failed", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
   };
 
-  // Helper to parse robots.txt for Tip #3
-  const getEngineStatus = (content: string | null, botName: string): { status: 'Allowed' | 'Blocked' | 'Unknown', detail: string } => {
-    if (!content) return { status: 'Unknown', detail: 'No robots.txt found' };
-    if (content.includes(`User-agent: ${botName}`) && content.includes("Disallow: /")) return { status: 'Blocked', detail: 'Explicitly blocked' };
-    if (content.includes(`User-agent: ${botName}`) && content.includes("Allow: /")) return { status: 'Allowed', detail: 'Explicitly allowed' };
-    return { status: 'Allowed', detail: 'Implicitly allowed (Wildcard)' }; // Default allow if not blocked
+  const getEngineStatus = (content: string | null, botName: string) => {
+    if (!content) return { status: 'Unknown', detail: 'Missing robots.txt' } as const;
+    if (content.includes(`User-agent: ${botName}`) && content.includes("Disallow: /")) return { status: 'Blocked', detail: 'Blocked' } as const;
+    if (content.includes(`User-agent: ${botName}`) && content.includes("Allow: /")) return { status: 'Allowed', detail: 'Explicit Allow' } as const;
+    return { status: 'Allowed', detail: 'Implicit Allow' } as const;
   };
 
   const downloadFile = (filename: string, content: string) => {
     const element = document.createElement("a");
     const file = new Blob([content], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = filename.endsWith('.txt') ? filename : `${filename}.txt`;
+    element.download = filename;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -123,176 +102,157 @@ const App: React.FC = () => {
     finally { setGenerateLoading(false); }
   };
 
-  const chartData = result ? [{ name: 'Overall', value: result.overall_score, fill: '#4f46e5' }] : [];
+  const chartData = result ? [{ name: 'Overall', value: result.overall_score, fill: '#ea580c' }] : [];
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
-      {/* Header */}
-      <header className="mb-10 text-center max-w-4xl mx-auto pt-8">
-        <h1 className="text-5xl font-black mb-3 vibrant-gradient-text tracking-tight">
-          MOJO AEO CHECKER
-        </h1>
-        <p className="text-dim text-xl font-medium">
-          Visibility Intelligence for the Agent Economy
-        </p>
+    <div className="min-h-screen p-4 flex flex-col items-center pt-10">
+      
+      {/* Header - Compact & Editorial */}
+      <header className={`text-center transition-all duration-500 ${step === 'results' ? 'mb-6' : 'mb-12 scale-110'}`}>
+        <h1 className="text-3xl font-black mb-1 vibrant-gradient-text tracking-tight uppercase">Mojo AEO Checker</h1>
+        <p className="text-stone-500 text-sm font-medium tracking-wide">Agent Economy Optimization Intelligence</p>
       </header>
 
       {/* STEP 1: Input */}
       {step === 'input' && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-card max-w-3xl mx-auto p-10 flex flex-col gap-6"
-        >
-          <div className="relative w-full">
-            <Search className="absolute left-5 top-5 text-dim" size={24} />
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card w-full max-w-lg p-6 shadow-xl">
+          <div className="relative mb-4">
+            <Search className="absolute left-4 top-3.5 text-stone-400" size={18} />
             <input
               type="text"
-              className="pl-14 py-5 text-xl w-full font-medium"
+              className="pl-11 py-3 w-full text-base font-medium"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               placeholder="Enter domain (e.g. ironhorse.io)"
               onKeyDown={(e) => e.key === 'Enter' && handleInitialCheck()}
             />
           </div>
-          <button onClick={handleInitialCheck} className="btn-primary py-5 text-lg w-full">
-            Start Audit
+          <button onClick={handleInitialCheck} className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2">
+            Start Audit <ArrowRight size={16} />
           </button>
         </motion.div>
       )}
 
       {/* STEP 2: Tip #1 Entity Confirmation */}
       {step === 'confirm' && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="glass-card max-w-2xl mx-auto p-8 border-l-4 border-l-primary"
-        >
-          <h2 className="text-2xl font-bold mb-2">Confirm Entity Identity</h2>
-          <p className="text-dim mb-6 text-sm">To ensure accurate scoring, please confirm how AI agents should identify this entity.</p>
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass-card w-full max-w-xl p-6 border-t-4 border-t-primary">
+          <div className="flex items-center gap-3 mb-4 text-stone-700">
+            <ShieldCheck className="text-primary" size={24} />
+            <h2 className="text-lg font-bold">Verify Identity</h2>
+          </div>
+          <p className="text-stone-500 text-sm mb-6 bg-orange-50 p-3 rounded-lg border border-orange-100">
+            <strong>Why this matters:</strong> Accurate scoring requires establishing the correct semantic entity before analysis begins.
+          </p>
           
-          <div className="space-y-4 mb-8">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <label className="block text-xs font-bold uppercase text-dim mb-1">Brand Name</label>
-              <input 
-                type="text" value={entityData.name} 
-                onChange={(e) => setEntityData({...entityData, name: e.target.value})}
-                className="w-full p-3 bg-white/50 border border-gray-200 rounded-lg font-bold text-lg"
-              />
+              <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Brand Name</label>
+              <input type="text" value={entityData.name} onChange={(e) => setEntityData({...entityData, name: e.target.value})} className="w-full p-2.5 font-bold text-stone-700" />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase text-dim mb-1">Entity Type</label>
-              <select 
-                value={entityData.type}
-                onChange={(e) => setEntityData({...entityData, type: e.target.value})}
-                className="w-full p-3 bg-white/50 border border-gray-200 rounded-lg"
-              >
-                <option>Organization</option>
-                <option>Product</option>
-                <option>Person</option>
+              <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Entity Type</label>
+              <select value={entityData.type} onChange={(e) => setEntityData({...entityData, type: e.target.value})} className="w-full p-2.5">
+                <option>Organization</option><option>Product</option><option>Person</option>
               </select>
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <button onClick={() => setStep('input')} className="btn-secondary flex-1 py-3">Back</button>
-            <button onClick={handleConfirmAndAnalyze} className="btn-primary flex-1 py-3 flex justify-center items-center gap-2">
-              Confirm & Analyze <TrendingUp size={18} />
+          <div className="flex gap-3">
+            <button onClick={() => setStep('input')} className="btn-secondary flex-1 py-2.5">Back</button>
+            <button onClick={handleConfirmAndAnalyze} className="btn-primary flex-[2] py-2.5 flex justify-center items-center gap-2">
+              Confirm & Run Analysis <TrendingUp size={16} />
             </button>
           </div>
         </motion.div>
       )}
 
-      {/* STEP 3: Results */}
+      {/* STEP 3: Results Dashboard - Compact Layout */}
       {step === 'results' && (
-        <div className="max-w-[1600px] mx-auto">
+        <div className="w-full max-w-[1200px]">
           {loading ? (
-            <div className="glass-card p-12 text-center">
-              <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"/>
-              <p className="text-lg font-medium text-dim">Analyzing agent visibility protocols...</p>
+            <div className="glass-card p-12 text-center max-w-lg mx-auto">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3"/>
+              <p className="text-sm font-medium text-stone-500 animate-pulse">Analyzing semantic protocols...</p>
             </div>
           ) : result && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-12 gap-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-12 gap-4">
               
-              {/* Left Column: Score & Actions */}
-              <div className="col-span-12 lg:col-span-3 space-y-6">
-                <div className="glass-card p-8 flex flex-col items-center text-center">
-                  <h3 className="text-lg font-bold mb-4 text-dim uppercase tracking-wider">Mojo Score</h3>
-                  <div className="relative w-48 h-48 mb-4">
+              {/* Left Sidebar: Score & Files */}
+              <div className="col-span-12 lg:col-span-3 space-y-4">
+                <div className="glass-card p-5 flex flex-col items-center text-center">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Mojo Score</span>
+                  <div className="relative w-32 h-32 mb-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadialBarChart innerRadius="80%" outerRadius="100%" data={chartData} startAngle={180} endAngle={-180}>
                         <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-                        <RadialBar background dataKey="value" cornerRadius={30} fill="#4f46e5" />
+                        <RadialBar background dataKey="value" cornerRadius={20} fill="#ea580c" />
                       </RadialBarChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-5xl font-black text-primary">{result.overall_score}</span>
+                      <span className="text-3xl font-black text-primary">{result.overall_score}</span>
                     </div>
-                  </div>
-                  <div className="w-full pt-6 border-t border-gray-100">
-                    <button onClick={() => { setCompLoading(true); setTimeout(() => setCompLoading(false), 2000); }} disabled={compLoading} className="btn-secondary w-full py-3 text-sm flex items-center justify-center gap-2">
-                      {compLoading ? 'Analyzing...' : 'Run Benchmarking'} <Users size={16}/>
-                    </button>
                   </div>
                 </div>
 
-                <div className="glass-card p-6">
-                   <h4 className="font-bold mb-4 flex items-center gap-2"><FileText size={20}/> Files Detected</h4>
-                   <div className="space-y-3">
+                <div className="glass-card p-4">
+                   <h4 className="font-bold text-xs mb-3 flex items-center gap-2 text-stone-600"><FileText size={14}/> Core Files</h4>
+                   <div className="space-y-2">
                      {[
                        {name: 'llm.txt', exists: result.aeo.llm_txt.exists, grade: result.aeo.llm_txt.grade},
                        {name: 'ai.txt', exists: result.aeo.ai_txt.exists, grade: result.aeo.ai_txt.grade},
                        {name: 'robots.txt', exists: result.aeo.robots_txt.exists, grade: result.aeo.robots_txt.grade},
                      ].map(f => (
-                       <div key={f.name} className="flex justify-between items-center p-3 bg-white/50 rounded-lg border border-gray-100">
-                         <span className="font-medium text-sm">{f.name}</span>
-                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${f.exists ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                       <div key={f.name} className="flex justify-between items-center p-2.5 bg-white/40 rounded border border-stone-100">
+                         <span className="font-medium text-xs text-stone-700">{f.name}</span>
+                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${f.exists ? 'badge-success' : 'badge-error'}`}>
                            {f.exists ? f.grade : 'Missing'}
                          </span>
                        </div>
                      ))}
                    </div>
-                   <button onClick={handleGenerateFiles} className="btn-primary w-full mt-6 py-3 text-sm">
-                     Generate Missing Files
+                   <button onClick={handleGenerateFiles} disabled={generateLoading} className="btn-secondary w-full mt-3 py-2 text-xs">
+                     {generateLoading ? 'Generating...' : 'Generate Assets'}
                    </button>
                 </div>
               </div>
 
-              {/* Right Column: Detailed Analysis */}
-              <div className="col-span-12 lg:col-span-9 space-y-6">
+              {/* Main Content Area */}
+              <div className="col-span-12 lg:col-span-9 space-y-4">
                 
-                {/* Tip #3: Split by Engine */}
-                <div className="glass-card p-8">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                    <Cpu className="text-primary" size={24} />
-                    <h3 className="text-xl font-bold">Engine Visibility Protocol</h3>
+                {/* Tip #3: Engine Split (Compact Grid) */}
+                <div className="glass-card p-5">
+                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-stone-100">
+                    <Cpu className="text-primary" size={18} />
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-stone-600">Engine Visibility Protocol</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <EngineCard name="GPT-4 (OpenAI)" {...getEngineStatus(result.aeo.robots_txt.content, 'GPTBot')} />
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <EngineCard name="GPT-4" {...getEngineStatus(result.aeo.robots_txt.content, 'GPTBot')} />
                     <EngineCard name="Claude 3" {...getEngineStatus(result.aeo.robots_txt.content, 'ClaudeBot')} />
                     <EngineCard name="Perplexity" {...getEngineStatus(result.aeo.robots_txt.content, 'PerplexityBot')} />
                     <EngineCard name="Google Gemini" {...getEngineStatus(result.aeo.robots_txt.content, 'Google-Extended')} />
                   </div>
                 </div>
 
-                {/* Advanced Signals */}
-                <div className="glass-card p-8">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                    <Globe className="text-secondary" size={24} />
-                    <h3 className="text-xl font-bold">Semantic Signals</h3>
+                {/* Advanced Signals List */}
+                <div className="glass-card p-5">
+                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-stone-100">
+                    <Globe className="text-primary" size={18} />
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-stone-600">Semantic Signals</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {Object.entries(result.advanced_checks).map(([key, val]) => (
-                      <div key={key} className="p-4 bg-white/50 rounded-xl border border-gray-100">
-                        <div className="flex justify-between mb-2">
-                          <span className="text-xs font-bold uppercase text-dim tracking-wider">{key.replace('_', ' ')}</span>
-                          <span className={`text-xs font-bold ${val.status === 'Great' ? 'text-green-600' : 'text-orange-500'}`}>{val.status}</span>
-                        </div>
-                        <p className="text-sm font-medium">{val.detail}</p>
+                      <div key={key} className="p-3 bg-white/40 rounded border border-stone-100 flex flex-col gap-1">
+                         <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold uppercase text-stone-400 tracking-wider">{key.replace('_', ' ')}</span>
+                            <span className={`text-[10px] font-bold px-1.5 rounded-sm ${val.status === 'Great' ? 'badge-success' : 'badge-warning'}`}>{val.status}</span>
+                         </div>
+                         <p className="text-xs font-medium text-stone-600 leading-tight">{val.detail}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
 
+              </div>
             </motion.div>
           )}
         </div>
@@ -300,21 +260,24 @@ const App: React.FC = () => {
 
       {/* Generate Modal */}
       {showGenerateModal && generatedFiles && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowGenerateModal(false)}>
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto bg-white" onClick={(e) => e.stopPropagation()}>
-             <h2 className="text-2xl font-bold mb-6">Generated Optimization Files</h2>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowGenerateModal(false)}>
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card w-full max-w-3xl p-6 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+             <div className="flex justify-between items-center mb-6">
+               <h2 className="text-lg font-bold text-stone-800">Generated Optimization Assets</h2>
+               <button onClick={() => setShowGenerateModal(false)} className="text-stone-400 hover:text-stone-600"><XCircle size={20}/></button>
+             </div>
+             <div className="grid grid-cols-3 gap-4 mb-6">
                 {['llm_txt', 'ai_txt', 'robots_txt'].map((key) => (
-                  <div key={key} className="p-4 border border-gray-200 rounded-xl">
-                    <h3 className="font-bold mb-2">{key.replace('_', '.')}</h3>
-                    <pre className="text-xs h-40 overflow-auto mb-3 bg-gray-900 text-gray-100 rounded p-2">
+                  <div key={key} className="p-3 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 className="font-bold text-xs mb-2 text-stone-600 uppercase">{key.replace('_', '.')}</h3>
+                    <div className="text-[10px] h-32 overflow-hidden relative mb-2 font-mono text-stone-500 bg-white p-2 border border-stone-100 rounded">
                       {generatedFiles[key as keyof GeneratedFiles] as string}
-                    </pre>
-                    <button onClick={() => downloadFile(key, generatedFiles[key as keyof GeneratedFiles] as string)} className="btn-secondary w-full py-2 text-xs">Download</button>
+                      <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent"/>
+                    </div>
+                    <button onClick={() => downloadFile(key.replace('_', '.'), generatedFiles[key as keyof GeneratedFiles] as string)} className="btn-secondary w-full py-1.5 text-xs">Download</button>
                   </div>
                 ))}
              </div>
-             <button onClick={() => setShowGenerateModal(false)} className="btn-primary w-full mt-8 py-3">Close</button>
           </motion.div>
         </div>
       )}
