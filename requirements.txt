@@ -1,0 +1,11 @@
+requests
+beautifulsoup4
+fastapi
+uvicorn
+python-dotenv
+requests==2.32.5
+beautifulsoup4==4.14.2
+streamlit==1.31.0
+plotly==5.18.0
+pandas
+python-dotenv==1.2.1

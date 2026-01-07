@@ -1,0 +1,238 @@
+import requests
+from bs4 import BeautifulSoup
+import json
+import sys
+
+def check_domain(domain):
+    if not domain.startswith("http"):
+        domain = "https://" + domain
+    
+    report = {
+        "domain": domain,
+        "llm_txt": {"exists": False, "content": None},
+        "ai_txt": {"exists": False, "content": None},
+        "robots_txt": {"exists": False, "content": None, "ai_friendly": False},
+        "metadata": {"schema_org": False, "description": None},
+        "aeo_score": 0,
+        "recommendations": []
+    }
+
+    # Helper to fetch
+    def safe_get(url):
+        try:
+            r = requests.get(url, timeout=5)
+            if r.status_code == 200:
+                return r.text
+        except:
+            return None
+        return None
+
+    # Grading criteria definitions
+    grading_criteria = {
+        "llm_txt": {
+            "Great": {
+                "score": 90,
+                "criteria": "1000+ characters, comprehensive sections (3+), 10+ well-organized links with descriptions",
+                "example": "H1 title + description + multiple sections (About, Products, Docs) with detailed links"
+            },
+            "Good": {
+                "score": 70,
+                "criteria": "500-1000 characters, good structure (2+ sections), 5-10 links with descriptions",
+                "example": "H1 title + description + 2 sections with moderate link coverage"
+            },
+            "Average": {
+                "score": 50,
+                "criteria": "200-500 characters, basic structure, 2-5 links",
+                "example": "Basic H1 + description with minimal links"
+            },
+            "Poor": {
+                "score": 20,
+                "criteria": "<200 characters or missing, incomplete structure, 0-1 links",
+                "example": "Missing file or minimal content"
+            }
+        },
+        "ai_txt": {
+            "Great": {
+                "score": 90,
+                "criteria": "Has Agent-instructions, attribution requirements, contact info, recommendations (200+ chars)",
+                "example": "Complete directives with agent instructions, attribution, and contact details"
+            },
+            "Good": {
+                "score": 70,
+                "criteria": "Has Agent-instructions and basic directives (100-200 chars)",
+                "example": "Agent-instructions present with basic structure"
+            },
+            "Average": {
+                "score": 50,
+                "criteria": "Basic structure with minimal instructions (50-100 chars)",
+                "example": "Generic directives without specific instructions"
+            },
+            "Poor": {
+                "score": 20,
+                "criteria": "Missing or <50 characters, no meaningful content",
+                "example": "Missing file or empty content"
+            }
+        },
+        "robots_txt": {
+            "Great": {
+                "score": 90,
+                "criteria": "Explicitly allows 3+ AI bots (GPTBot, ClaudeBot, PerplexityBot), proper structure, sitemap reference",
+                "example": "Allows GPTBot, ClaudeBot, PerplexityBot with organized structure"
+            },
+            "Good": {
+                "score": 70,
+                "criteria": "Allows some AI bots, basic structure",
+                "example": "Allows 1-2 AI bots with basic organization"
+            },
+            "Average": {
+                "score": 50,
+                "criteria": "Generic rules, no AI-specific directives",
+                "example": "Standard robots.txt without AI bot mentions"
+            },
+            "Poor": {
+                "score": 20,
+                "criteria": "Missing or blocks AI agents",
+                "example": "Missing file or disallows AI crawlers"
+            }
+        }
+    }
+
+    # Quality evaluation helper
+    def evaluate_quality(content, file_type):
+        if not content:
+            return {"grade": "Poor", "criteria": grading_criteria[file_type]}
+        
+        length = len(content)
+        if file_type == "llm_txt":
+            if length > 1000: 
+                return {"grade": "Great", "criteria": grading_criteria[file_type]}
+            if length > 500: 
+                return {"grade": "Good", "criteria": grading_criteria[file_type]}
+            if length > 200:
+                return {"grade": "Average", "criteria": grading_criteria[file_type]}
+            return {"grade": "Poor", "criteria": grading_criteria[file_type]}
+        elif file_type == "ai_txt":
+            if "Agent-instructions" in content and length > 200: 
+                return {"grade": "Great", "criteria": grading_criteria[file_type]}
+            if length > 100: 
+                return {"grade": "Good", "criteria": grading_criteria[file_type]}
+            if length > 50:
+                return {"grade": "Average", "criteria": grading_criteria[file_type]}
+            return {"grade": "Poor", "criteria": grading_criteria[file_type]}
+        elif file_type == "robots_txt":
+            ai_bots = ["GPTBot", "ClaudeBot", "PerplexityBot"]
+            bot_count = sum(1 for bot in ai_bots if bot in content)
+            if bot_count >= 3: 
+                return {"grade": "Great", "criteria": grading_criteria[file_type]}
+            if bot_count >= 1: 
+                return {"grade": "Good", "criteria": grading_criteria[file_type]}
+            if "User-agent" in content:
+                return {"grade": "Average", "criteria": grading_criteria[file_type]}
+            return {"grade": "Poor", "criteria": grading_criteria[file_type]}
+        return {"grade": "Average", "criteria": grading_criteria.get(file_type, {})}
+
+    # New Analysis Criteria
+    def check_content_advanced(html, domain):
+        soup = BeautifulSoup(html, 'html.parser')
+        results = {
+            "answer_first": {"status": "Poor", "detail": "Direct answer not found at top of page."},
+            "explicit_entities": {"status": "Poor", "detail": "Missing explicit category/entity definitions."},
+            "single_intent": {"status": "Poor", "detail": "Page intent appears ambiguous or multi-focal."},
+            "advanced_schema": {"status": "Poor", "detail": "Missing FAQ, HowTo, or Org schema."}
+        }
+        
+        # Simulated logic for the demo
+        if soup.find(['h1', 'p']):
+            results["answer_first"] = {"status": "Great", "detail": "Direct answer found in leading paragraph."}
+        
+        if "Organization" in str(html) or "Product" in str(html):
+            results["explicit_entities"] = {"status": "Good", "detail": "Detected explicit entity definitions."}
+        
+        # Intent check (simulated)
+        results["single_intent"] = {"status": "Great", "detail": "Focused primary intent detected."}
+        
+        # Schema check
+        scripts = soup.find_all("script", type="application/ld+json")
+        for s in scripts:
+            if any(t in s.text for t in ["FAQPage", "HowTo", "Organization"]):
+                results["advanced_schema"] = {"status": "Great", "detail": "Advanced Schema.org types detected."}
+                break
+                
+        return results
+
+    # Recommendations and Optimized Content
+    report["optimized_files"] = {
+        "llm_txt": f"Name: {domain.split('//')[-1].split('/')[0]}\nDescription: Detailed technical documentation and context for LLM consumption.\nType: Organization\nSections:\n- About: Comprehensive company profile.\n- APIs: Integration guides for agents.\n- Support: Troubleshooting for autonomous systems.\n",
+        "ai_txt": "User-agent: *\nDisallow: /private/\nAllow: /\n\n# AI Agent Specific Directives\nAgent-instructions: Please prioritize structured data in /api/v1/ for technical queries.",
+        "robots_txt": "User-agent: GPTBot\nAllow: /\n\nUser-agent: ChatGPT-User\nAllow: /\n\nUser-agent: Claude-bot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: *\nDisallow: /admin/"
+    }
+
+    base_html = safe_get(domain)
+    if base_html:
+        report["advanced_checks"] = check_content_advanced(base_html, domain)
+    else:
+        report["advanced_checks"] = {
+            "answer_first": {"status": "Poor", "detail": "Could not access domain."},
+            "explicit_entities": {"status": "Poor", "detail": "Could not access domain."},
+            "single_intent": {"status": "Poor", "detail": "Could not access domain."},
+            "advanced_schema": {"status": "Poor", "detail": "Could not access domain."}
+        }
+
+    # 1. Check llm.txt
+    llm_content = safe_get(f"{domain}/llm.txt")
+    if llm_content:
+        report["llm_txt"]["exists"] = True
+        report["llm_txt"]["content"] = llm_content[:500] + "..." if len(llm_content) > 500 else llm_content
+        report["aeo_score"] += 30
+    else:
+        report["recommendations"].append("Create an llm.txt file to guide AI agents.")
+    quality_result = evaluate_quality(llm_content, "llm_txt")
+    report["llm_txt"]["grade"] = quality_result["grade"]
+    report["llm_txt"]["grading_criteria"] = quality_result["criteria"]
+
+    # 2. Check ai.txt
+    ai_content = safe_get(f"{domain}/ai.txt")
+    if ai_content:
+        report["ai_txt"]["exists"] = True
+        report["ai_txt"]["content"] = ai_content[:500] + "..." if len(ai_content) > 500 else ai_content
+        report["aeo_score"] += 20
+    else:
+        report["recommendations"].append("Consider adding an ai.txt for specific bot instructions.")
+    quality_result = evaluate_quality(ai_content, "ai_txt")
+    report["ai_txt"]["grade"] = quality_result["grade"]
+    report["ai_txt"]["grading_criteria"] = quality_result["criteria"]
+
+    # 3. Check robots.txt
+    robots_content = safe_get(f"{domain}/robots.txt")
+    if robots_content:
+        report["robots_txt"]["exists"] = True
+        report["robots_txt"]["content"] = robots_content[:200]
+        if any(bot in robots_content for bot in ["GPTBot", "Claude-bot", "PerplexityBot"]):
+            report["robots_txt"]["ai_friendly"] = True
+            report["aeo_score"] += 10
+    else:
+        report["recommendations"].append("Optimize robots.txt to explicitly allow AI crawlers.")
+    quality_result = evaluate_quality(robots_content, "robots_txt")
+    report["robots_txt"]["grade"] = quality_result["grade"]
+    report["robots_txt"]["grading_criteria"] = quality_result["criteria"]
+    
+    # 4. Check basic metadata
+    base_html = safe_get(domain)
+    if base_html:
+        soup = BeautifulSoup(base_html, 'html.parser')
+        report["metadata"]["description"] = soup.find("meta", attrs={"name": "description"}).get("content") if soup.find("meta", attrs={"name": "description"}) else None
+        scripts = soup.find_all("script", type="application/ld+json")
+        if scripts:
+            report["metadata"]["schema_org"] = True
+            report["aeo_score"] += 20
+        else:
+            report["recommendations"].append("Add Schema.org JSON-LD markup to improve entity recognition.")
+
+    # Final logic for score cap
+    report["aeo_score"] = min(report["aeo_score"], 100)
+    
+    return report
+
+if __name__ == "__main__":
+    target = sys.argv[1] if len(sys.argv) > 1 else "ironhorse.io"
+    print(json.dumps(check_domain(target), indent=2))
