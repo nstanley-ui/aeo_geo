@@ -1,27 +1,28 @@
 :root {
-  /* Soft Glass Theme Variables */
-  --primary: #4f46e5;       /* Indigo 600 */
-  --primary-hover: #4338ca; /* Indigo 700 */
-  --secondary: #db2777;     /* Pink 600 */
-  --accent: #0891b2;        /* Cyan 600 */
+  /* WARM & PREMIUM PALETTE */
+  --primary: #ea580c;       /* Burnt Orange / Terracotta */
+  --primary-hover: #c2410c; /* Darker Terracotta */
+  --secondary: #78716c;     /* Warm Stone Grey */
+  --accent: #d97706;        /* Amber/Gold */
   
-  /* Light/Day Backgrounds */
-  --bg-gradient-start: #f0f9ff; /* Light Blue */
-  --bg-gradient-end: #e0e7ff;   /* Light Indigo */
+  /* Background Gradients (Creamy/Daylight) */
+  --bg-gradient-start: #fff7ed; /* Orange-50 */
+  --bg-gradient-end: #e7e5e4;   /* Stone-200 */
   
-  /* Glass Components */
-  --bg-glass: rgba(255, 255, 255, 0.65);
-  --border-glass: rgba(255, 255, 255, 0.9);
-  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  /* Soft Glass Variables */
+  --bg-glass: rgba(255, 255, 255, 0.55);
+  --border-glass: rgba(255, 255, 255, 0.6);
+  --shadow-glass: 0 4px 20px -2px rgba(68, 64, 60, 0.1); /* Warm shadow */
   
-  /* Text Colors (Dark for readability) */
-  --text-main: #1e293b;     /* Slate 800 */
-  --text-dim: #475569;      /* Slate 600 */
-  --text-light: #94a3b8;    /* Slate 400 */
+  /* Text Colors (Softer Contrast) */
+  --text-main: #44403c;     /* Stone-700 */
+  --text-dim: #78716c;      /* Stone-500 */
+  --text-light: #a8a29e;    /* Stone-400 */
 
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
+  /* Compact Typography */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px; /* Slightly smaller base size for compactness */
+  line-height: 1.4;
 }
 
 body {
@@ -36,128 +37,111 @@ body {
 
 #root {
   width: 100%;
-  max-width: 1600px;
+  max-width: 1400px; /* Tighter container for compact view */
   margin: 0 auto;
 }
 
-/* Glass Card Styling */
+/* Glass Card Styling - Editorial Feel */
 .glass-card {
   background: var(--bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-glass);
-  border-radius: 1.5rem;
+  border-radius: 1rem; /* Tighter radius */
   box-shadow: var(--shadow-glass);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-/* Typography & Utilities */
+/* Utility Classes */
 .text-center { text-align: center; }
 .mx-auto { margin-left: auto; margin-right: auto; }
-.mb-8 { margin-bottom: 2rem; }
 .mb-6 { margin-bottom: 1.5rem; }
 .mb-4 { margin-bottom: 1rem; }
+.mb-2 { margin-bottom: 0.5rem; }
 .p-6 { padding: 1.5rem; }
-.p-8 { padding: 2rem; }
+.p-4 { padding: 1rem; } /* Reduced padding */
 .w-full { width: 100%; }
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
+.gap-2 { gap: 0.5rem; }
 .gap-4 { gap: 1rem; }
-.gap-6 { gap: 1.5rem; }
 .grid { display: grid; }
 
-/* Text Gradients */
+/* Warm Gradient Text */
 .vibrant-gradient-text {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: linear-gradient(135deg, var(--primary), #b45309);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 /* Inputs */
-input[type="text"] {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+input[type="text"], select {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(120, 113, 108, 0.2); /* Stone border */
   color: var(--text-main);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   outline: none;
   transition: all 0.2s;
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus, select:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
   background: #fff;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.1);
 }
 
 /* Buttons */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #4338ca);
+  background: linear-gradient(to bottom right, var(--primary), #c2410c);
   color: white;
   border: none;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  font-size: 0.85rem;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
-}
-
-.btn-primary:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0,0,0,0.1);
-  color: var(--text-main);
-  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(120, 113, 108, 0.2);
+  color: var(--text-dim);
+  border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 0.85rem;
 }
 
 .btn-secondary:hover {
   background: #fff;
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--text-dim);
+  color: var(--text-main);
 }
 
-/* Grid System */
-.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Compact Grid */
 .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 .col-span-12 { grid-column: span 12 / span 12; }
 
 @media (min-width: 1024px) {
   .lg\:col-span-3 { grid-column: span 3 / span 3; }
   .lg\:col-span-9 { grid-column: span 9 / span 9; }
-  .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-/* Preformatted text */
-pre {
-  background: rgba(0,0,0,0.8);
-  color: #f1f5f9;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  overflow-x: auto;
-}
-
-/* Modal Overlay */
-.modal-overlay {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(4px);
-}
-
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
+/* Status Badges - Warm Tones */
+.badge-success { color: #15803d; background: #dcfce7; }
+.badge-warning { color: #b45309; background: #fef3c7; }
+.badge-error { color: #b91c1c; background: #fee2e2; }
+.badge-neutral { color: #57534e; background: #f5f5f4; }
