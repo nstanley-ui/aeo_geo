@@ -89,7 +89,8 @@
                         st.warning("Could not generate.")
                 else:
                     # Placeholder state
-                    st.button("Waiting for generator...", disabled=True, key=f"placeholder_{idx}", use_container_width=True)
+                    st.button("Waiting for generator...", disabled=True, key=f"placeholder_{idx}", use_container_width=True)True)
+
 
 
 
