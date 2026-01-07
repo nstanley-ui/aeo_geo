@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Globe, TrendingUp, CheckCircle, XCircle, AlertTriangle, Cpu, FileText, ArrowRight, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Search, Globe, TrendingUp, CheckCircle, XCircle, AlertTriangle, Cpu, FileText, ArrowRight, ShieldCheck, ChevronRight, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
@@ -102,6 +102,12 @@ const App: React.FC = () => {
     finally { setGenerateLoading(false); }
   };
 
+  // Helper to build clean clickable URLs
+  const getFileUrl = (dom: string, file: string) => {
+    const cleanDomain = dom.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    return `https://${cleanDomain}/${file}`;
+  };
+
   const chartData = result ? [{ name: 'Overall', value: result.overall_score, fill: '#ea580c' }] : [];
 
   return (
@@ -194,6 +200,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
+                {/* UPDATED FILE SECTION WITH CLICKABLE LINKS */}
                 <div className="glass-card p-4">
                    <h4 className="font-bold text-xs mb-3 flex items-center gap-2 text-stone-600"><FileText size={14}/> Core Files</h4>
                    <div className="space-y-2">
@@ -203,7 +210,16 @@ const App: React.FC = () => {
                        {name: 'robots.txt', exists: result.aeo.robots_txt.exists, grade: result.aeo.robots_txt.grade},
                      ].map(f => (
                        <div key={f.name} className="flex justify-between items-center p-2.5 bg-white/40 rounded border border-stone-100">
-                         <span className="font-medium text-xs text-stone-700">{f.name}</span>
+                         <a 
+                           href={getFileUrl(domain, f.name)}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="font-medium text-xs text-stone-700 hover:text-primary hover:underline flex items-center gap-1 group"
+                           title={`Verify ${f.name} manually`}
+                         >
+                           {f.name} 
+                           <ExternalLink size={10} className="text-stone-400 group-hover:text-primary transition-colors" />
+                         </a>
                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${f.exists ? 'badge-success' : 'badge-error'}`}>
                            {f.exists ? f.grade : 'Missing'}
                          </span>
